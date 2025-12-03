@@ -1,5 +1,5 @@
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Stack } from "expo-router";
+import { Stack, router } from "expo-router";
 import React, { useState } from "react";
 import { FlatList, StyleSheet, TouchableOpacity, View } from "react-native";
 
@@ -233,7 +233,9 @@ export default function ItemsScreen() {
 							style={[
 								styles.summaryButton,
 								{ backgroundColor: activeColor },
-							]}>
+							]}
+							onPress={() => router.push("/modal")}
+						>
 							<ThemedText
 								style={{ color: "white", fontWeight: "bold" }}>
 								Lihat Hasil

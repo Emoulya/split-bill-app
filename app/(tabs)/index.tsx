@@ -53,7 +53,7 @@ export default function SetupScreen() {
 						<ThemedText
 							type="subtitle"
 							style={styles.sectionTitle}>
-							📝 Info Tagihan
+							Info Tagihan
 						</ThemedText>
 
 						<ThemedInput
@@ -96,7 +96,7 @@ export default function SetupScreen() {
 						<ThemedText
 							type="subtitle"
 							style={styles.sectionTitle}>
-							👥 Siapa aja yang ikut?
+							Siapa aja yang ikut?
 						</ThemedText>
 
 						{/* List Orang yang sudah ada */}
