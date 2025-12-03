@@ -1,112 +1,314 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { IconSymbol } from "@/components/ui/icon-symbol";
+import { Stack } from "expo-router";
+import React, { useState } from "react";
+import { FlatList, StyleSheet, TouchableOpacity, View } from "react-native";
 
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { Colors } from "@/constants/theme";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { ThemedInput } from "@/src/components/ui/ThemedInput";
+import { useBillStore } from "@/src/store/billStore";
 
-export default function TabTwoScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
-  );
+export default function ItemsScreen() {
+	const { currentBill, addItem, updateItemAssignment, billSummary } =
+		useBillStore();
+	const theme = useColorScheme() ?? "light";
+
+	// State untuk form input item baru
+	const [itemName, setItemName] = useState("");
+	const [itemPrice, setItemPrice] = useState("");
+	const [itemQty, setItemQty] = useState("1");
+
+	// State untuk accordion (item mana yang sedang dibuka untuk assign orang)
+	const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+
+	const handleAddItem = () => {
+		if (!itemName || !itemPrice) return;
+
+		addItem({
+			name: itemName,
+			price: parseFloat(itemPrice) || 0,
+			quantity: parseInt(itemQty) || 1,
+		});
+
+		// Reset form
+		setItemName("");
+		setItemPrice("");
+		setItemQty("1");
+	};
+
+	const toggleExpand = (id: string) => {
+		setExpandedItemId(expandedItemId === id ? null : id);
+	};
+
+	const activeColor = Colors[theme].tint;
+
+	return (
+		<>
+			<Stack.Screen options={{ title: "Menu & Split" }} />
+			<ThemedView style={styles.container}>
+				{/* --- FORM INPUT ITEM BARU --- */}
+				<View style={styles.inputContainer}>
+					<ThemedText
+						type="subtitle"
+						style={{ marginBottom: 10 }}>
+						Tambah Menu
+					</ThemedText>
+					<ThemedInput
+						placeholder="Nama Menu (misal: Sate Ayam)"
+						value={itemName}
+						onChangeText={setItemName}
+					/>
+					<View style={{ flexDirection: "row", gap: 10 }}>
+						<View style={{ flex: 2 }}>
+							<ThemedInput
+								placeholder="Harga"
+								keyboardType="numeric"
+								value={itemPrice}
+								onChangeText={setItemPrice}
+							/>
+						</View>
+						<View style={{ flex: 1 }}>
+							<ThemedInput
+								placeholder="Qty"
+								keyboardType="numeric"
+								value={itemQty}
+								onChangeText={setItemQty}
+							/>
+						</View>
+						<TouchableOpacity
+							style={[
+								styles.addButton,
+								{ backgroundColor: activeColor },
+							]}
+							onPress={handleAddItem}>
+							<IconSymbol
+								name="plus"
+								size={24}
+								color="white"
+							/>
+						</TouchableOpacity>
+					</View>
+				</View>
+
+				{/* --- DAFTAR ITEM (LIST) --- */}
+				<FlatList
+					data={currentBill.items}
+					keyExtractor={(item) => item.id}
+					contentContainerStyle={{ paddingBottom: 100 }}
+					renderItem={({ item }) => {
+						const isExpanded = expandedItemId === item.id;
+						const assignedCount =
+							item.assignedToParticipantIds.length;
+
+						return (
+							<View
+								style={[
+									styles.card,
+									{
+										borderColor:
+											theme === "light" ? "#eee" : "#333",
+									},
+								]}>
+								{/* Header Card */}
+								<TouchableOpacity
+									onPress={() => toggleExpand(item.id)}
+									style={styles.cardHeader}>
+									<View style={{ flex: 1 }}>
+										<ThemedText type="defaultSemiBold">
+											{item.name}
+										</ThemedText>
+										<ThemedText
+											style={{
+												fontSize: 12,
+												opacity: 0.6,
+											}}>
+											{item.quantity}x @{" "}
+											{item.price.toLocaleString()}
+										</ThemedText>
+									</View>
+
+									<View style={{ alignItems: "flex-end" }}>
+										<ThemedText type="defaultSemiBold">
+											{(
+												item.price * item.quantity
+											).toLocaleString()}
+										</ThemedText>
+										<ThemedText
+											style={{
+												fontSize: 12,
+												color:
+													assignedCount === 0
+														? "red"
+														: activeColor,
+											}}>
+											{assignedCount === 0
+												? "Belum ada yg makan"
+												: `Dibagi ${assignedCount} orang`}
+										</ThemedText>
+									</View>
+								</TouchableOpacity>
+
+								{/* Body Card (Daftar Orang - Muncul jika Expanded) */}
+								{isExpanded && (
+									<View style={styles.assignmentContainer}>
+										<ThemedText
+											style={{
+												marginBottom: 8,
+												fontSize: 12,
+											}}>
+											Siapa yang makan ini?
+										</ThemedText>
+										<View style={styles.chipContainer}>
+											{currentBill.participants.map(
+												(person) => {
+													const isSelected =
+														item.assignedToParticipantIds.includes(
+															person.id
+														);
+													return (
+														<TouchableOpacity
+															key={person.id}
+															onPress={() =>
+																updateItemAssignment(
+																	item.id,
+																	person.id
+																)
+															}
+															style={[
+																styles.chip,
+																isSelected
+																	? {
+																			backgroundColor:
+																				activeColor,
+																	  }
+																	: {
+																			backgroundColor:
+																				"#ccc",
+																	  },
+															]}>
+															<ThemedText
+																style={{
+																	color: "white",
+																	fontSize: 12,
+																}}>
+																{person.name}
+															</ThemedText>
+														</TouchableOpacity>
+													);
+												}
+											)}
+										</View>
+									</View>
+								)}
+							</View>
+						);
+					}}
+				/>
+
+				{/* --- STICKY FOOTER (TOTAL) --- */}
+				{billSummary && (
+					<View
+						style={[
+							styles.footer,
+							{
+								borderTopColor:
+									theme === "light" ? "#eee" : "#333",
+								backgroundColor:
+									theme === "light" ? "#fff" : "#151718",
+							},
+						]}>
+						<View>
+							<ThemedText style={{ fontSize: 12 }}>
+								Grand Total
+							</ThemedText>
+							<ThemedText type="title">
+								{Math.ceil(
+									billSummary.grandTotal
+								).toLocaleString()}
+							</ThemedText>
+						</View>
+						<TouchableOpacity
+							style={[
+								styles.summaryButton,
+								{ backgroundColor: activeColor },
+							]}>
+							<ThemedText
+								style={{ color: "white", fontWeight: "bold" }}>
+								Lihat Hasil
+							</ThemedText>
+						</TouchableOpacity>
+					</View>
+				)}
+			</ThemedView>
+		</>
+	);
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
+	container: {
+		flex: 1,
+		padding: 16,
+	},
+	inputContainer: {
+		marginBottom: 20,
+	},
+	addButton: {
+		width: 48,
+		height: 48,
+		borderRadius: 8,
+		justifyContent: "center",
+		alignItems: "center",
+		marginBottom: 12,
+	},
+	card: {
+		borderWidth: 1,
+		borderRadius: 12,
+		marginBottom: 12,
+		overflow: "hidden",
+	},
+	cardHeader: {
+		padding: 16,
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+	},
+	assignmentContainer: {
+		padding: 16,
+		paddingTop: 0,
+		backgroundColor: "rgba(150,150,150, 0.05)",
+	},
+	chipContainer: {
+		flexDirection: "row",
+		flexWrap: "wrap",
+		gap: 8,
+	},
+	chip: {
+		paddingVertical: 6,
+		paddingHorizontal: 12,
+		borderRadius: 20,
+	},
+	footer: {
+		position: "absolute",
+		bottom: 0,
+		left: 0,
+		right: 0,
+		borderTopWidth: 1,
+		padding: 16,
+		paddingBottom: 30,
+		flexDirection: "row",
+		justifyContent: "space-between",
+		alignItems: "center",
+		elevation: 10,
+		shadowColor: "#000",
+		shadowOffset: { width: 0, height: -2 },
+		shadowOpacity: 0.1,
+		shadowRadius: 4,
+	},
+	summaryButton: {
+		paddingVertical: 10,
+		paddingHorizontal: 20,
+		borderRadius: 24,
+	},
 });

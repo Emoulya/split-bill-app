@@ -1,98 +1,231 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { IconSymbol } from "@/components/ui/icon-symbol";
+import { Stack } from "expo-router";
+import React, { useState } from "react";
+import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+// Components
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
+import { ThemedInput } from "@/src/components/ui/ThemedInput";
 
-export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+// Store
+import { useBillStore } from "@/src/store/billStore";
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
-  );
+export default function SetupScreen() {
+	// Data & Action dari Store
+	const { currentBill, setBillInfo, addParticipant, removeParticipant } =
+		useBillStore();
+
+	// State lokal untuk input nama teman baru
+	const [newParticipantName, setNewParticipantName] = useState("");
+
+	// Handler untuk update info bill
+	const handleInfoChange = (
+		field: "title" | "tax" | "service",
+		value: string
+	) => {
+		let title = currentBill.title;
+		let tax = currentBill.taxRate;
+		let service = currentBill.serviceRate;
+
+		if (field === "title") title = value;
+		if (field === "tax") tax = parseFloat(value) || 0;
+		if (field === "service") service = parseFloat(value) || 0;
+
+		setBillInfo(title, tax, service);
+	};
+
+	// Handler tambah orang
+	const handleAddPerson = () => {
+		if (newParticipantName.trim().length === 0) return;
+		addParticipant(newParticipantName.trim());
+		setNewParticipantName(""); // Reset input
+	};
+
+	return (
+		<>
+			<Stack.Screen options={{ title: "Setup Bill" }} />
+
+			<ThemedView style={{ flex: 1 }}>
+				<ScrollView contentContainerStyle={styles.scrollContent}>
+					{/* --- INFO BILL --- */}
+					<ThemedView style={styles.section}>
+						<ThemedText
+							type="subtitle"
+							style={styles.sectionTitle}>
+							📝 Info Tagihan
+						</ThemedText>
+
+						<ThemedInput
+							label="Nama Tempat / Judul"
+							placeholder="Contoh: Makan Siang Padang"
+							value={currentBill.title}
+							onChangeText={(text) =>
+								handleInfoChange("title", text)
+							}
+						/>
+
+						<View style={styles.row}>
+							<View style={{ flex: 1, marginRight: 8 }}>
+								<ThemedInput
+									label="Pajak (Tax) %"
+									placeholder="0"
+									keyboardType="numeric"
+									value={currentBill.taxRate.toString()}
+									onChangeText={(text) =>
+										handleInfoChange("tax", text)
+									}
+								/>
+							</View>
+							<View style={{ flex: 1, marginLeft: 8 }}>
+								<ThemedInput
+									label="Layanan (Service) %"
+									placeholder="0"
+									keyboardType="numeric"
+									value={currentBill.serviceRate.toString()}
+									onChangeText={(text) =>
+										handleInfoChange("service", text)
+									}
+								/>
+							</View>
+						</View>
+					</ThemedView>
+
+					{/* --- PARTISIPAN --- */}
+					<ThemedView style={styles.section}>
+						<ThemedText
+							type="subtitle"
+							style={styles.sectionTitle}>
+							👥 Siapa aja yang ikut?
+						</ThemedText>
+
+						{/* List Orang yang sudah ada */}
+						<View style={styles.participantList}>
+							{currentBill.participants.map((person, index) => (
+								<View
+									key={person.id}
+									style={styles.participantItem}>
+									<View style={styles.avatar}>
+										<ThemedText style={styles.avatarText}>
+											{person.name
+												.charAt(0)
+												.toUpperCase()}
+										</ThemedText>
+									</View>
+									<ThemedText style={styles.participantName}>
+										{person.name}{" "}
+										{person.isOwner ? "(Host)" : ""}
+									</ThemedText>
+
+									{!person.isOwner && (
+										<TouchableOpacity
+											onPress={() =>
+												removeParticipant(person.id)
+											}>
+											<IconSymbol
+												name="xmark.circle.fill"
+												size={24}
+												color="#ff4444"
+											/>
+										</TouchableOpacity>
+									)}
+								</View>
+							))}
+						</View>
+
+						{/* Input Tambah Orang Baru */}
+						<View style={styles.addParticipantRow}>
+							<View style={{ flex: 1 }}>
+								<ThemedInput
+									placeholder="Nama teman..."
+									value={newParticipantName}
+									onChangeText={setNewParticipantName}
+									onSubmitEditing={handleAddPerson}
+								/>
+							</View>
+							<TouchableOpacity
+								style={styles.addButton}
+								onPress={handleAddPerson}>
+								<IconSymbol
+									name="plus"
+									size={24}
+									color="white"
+								/>
+							</TouchableOpacity>
+						</View>
+					</ThemedView>
+
+					{/* --- NEXT STEP INSTRUCTION --- */}
+					<ThemedText style={styles.hint}>
+						Lanjut ke tab "Items" untuk input menu makanan.
+					</ThemedText>
+				</ScrollView>
+			</ThemedView>
+		</>
+	);
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
+	scrollContent: {
+		padding: 16,
+		paddingBottom: 100,
+	},
+	section: {
+		marginBottom: 24,
+		backgroundColor: "transparent",
+	},
+	sectionTitle: {
+		marginBottom: 12,
+	},
+	row: {
+		flexDirection: "row",
+	},
+	// Style untuk Partisipan
+	participantList: {
+		marginBottom: 12,
+		gap: 8,
+	},
+	participantItem: {
+		flexDirection: "row",
+		alignItems: "center",
+		padding: 10,
+		backgroundColor: "rgba(150, 150, 150, 0.1)",
+		borderRadius: 12,
+	},
+	avatar: {
+		width: 32,
+		height: 32,
+		borderRadius: 16,
+		backgroundColor: "#0a7ea4",
+		alignItems: "center",
+		justifyContent: "center",
+		marginRight: 10,
+	},
+	avatarText: {
+		color: "white",
+		fontWeight: "bold",
+	},
+	participantName: {
+		flex: 1,
+		fontSize: 16,
+	},
+	addParticipantRow: {
+		flexDirection: "row",
+		alignItems: "flex-start",
+		gap: 10,
+	},
+	addButton: {
+		backgroundColor: "#0a7ea4",
+		width: 48,
+		height: 48,
+		borderRadius: 8,
+		alignItems: "center",
+		justifyContent: "center",
+		marginTop: 0,
+	},
+	hint: {
+		textAlign: "center",
+		opacity: 0.5,
+		marginTop: 20,
+	},
 });
