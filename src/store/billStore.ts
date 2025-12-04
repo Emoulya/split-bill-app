@@ -2,117 +2,131 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Crypto from "expo-crypto";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import { BillSummary, calculateBill } from "../features/bill/billCalculator";
+import { calculateBill } from "../features/bill/billCalculator";
 import { Bill, BillItem, Participant } from "../types/Bill";
 
-// --- Interfaces untuk State ---
 interface BillState {
-	// Data Bill yang sedang diedit (Draft)
-	currentBill: Bill;
+	// State Utama
+	bills: Bill[];
+	activeBillId: string | null;
 
-	// Hasil hitungan (otomatis di-update saat data berubah)
-	billSummary: BillSummary | null;
+	// --- Actions: Manajemen Global Bill ---
+	createBill: () => void;
+	deleteBill: (id: string) => void;
+	setActiveBill: (id: string) => void;
 
-	// --- Actions ---
+	// --- Actions: Edit Active Bill ---
 	setBillInfo: (title: string, taxRate: number, serviceRate: number) => void;
 	addParticipant: (name: string) => void;
 	removeParticipant: (id: string) => void;
 	addItem: (item: Omit<BillItem, "id" | "assignedToParticipantIds">) => void;
-	updateItemAssignment: (itemId: string, participantId: string) => void;
-	resetBill: () => void;
-
 	removeItem: (itemId: string) => void;
 	updateItem: (
 		itemId: string,
 		data: Partial<Omit<BillItem, "id" | "assignedToParticipantIds">>
 	) => void;
-
+	updateItemAssignment: (itemId: string, participantId: string) => void;
 	toggleAllAssignment: (itemId: string, selectAll: boolean) => void;
+
+	cleanupEmptyBills: () => void;
 }
 
-// --- Initial State ---
-const initialBill: Bill = {
-	id: "",
+// Helper untuk membuat object Bill baru yang bersih
+const createNewBillData = (): Bill => ({
+	id: Crypto.randomUUID(),
 	title: "",
-	createdAt: "",
+	createdAt: new Date().toISOString(),
 	taxRate: 0,
 	serviceRate: 0,
 	discount: 0,
-	participants: [], // Minimal 1 orang (Host)
+	participants: [],
 	items: [],
 	isClosed: false,
-};
+});
 
-// --- Store Implementation ---
 export const useBillStore = create<BillState>()(
 	persist(
 		(set, get) => ({
-			currentBill: {
-				...initialBill,
-				id: Crypto.randomUUID(),
-				createdAt: new Date().toISOString(),
-			},
-			billSummary: null,
+			bills: [],
+			activeBillId: null,
 
+			// --- MANAJEMEN BILL ---
+
+			createBill: () => {
+				const newBill = createNewBillData();
+				set((state) => ({
+					bills: [newBill, ...state.bills],
+					activeBillId: newBill.id,
+				}));
+			},
+
+			deleteBill: (id) => {
+				set((state) => ({
+					bills: state.bills.filter((b) => b.id !== id),
+					activeBillId:
+						state.activeBillId === id ? null : state.activeBillId,
+				}));
+			},
+
+			setActiveBill: (id) => {
+				set({ activeBillId: id });
+			},
 			setBillInfo: (title, taxRate, serviceRate) => {
-				set((state) => {
-					const updatedBill = {
-						...state.currentBill,
-						title,
-						taxRate,
-						serviceRate,
-					};
-					const summary = calculateBill(updatedBill);
-					return { currentBill: updatedBill, billSummary: summary };
-				});
+				set((state) => ({
+					bills: state.bills.map((b) =>
+						b.id === state.activeBillId
+							? { ...b, title, taxRate, serviceRate }
+							: b
+					),
+				}));
 			},
 
 			addParticipant: (name) => {
-				const newParticipant: Participant = {
+				const newPerson: Participant = {
 					id: Crypto.randomUUID(),
 					name,
 					isOwner: false,
 				};
-
 				set((state) => ({
-					currentBill: {
-						...state.currentBill,
-						participants: [
-							...state.currentBill.participants,
-							newParticipant,
-						],
-					},
+					bills: state.bills.map((b) =>
+						b.id === state.activeBillId
+							? {
+									...b,
+									participants: [
+										...b.participants,
+										newPerson,
+									],
+							  }
+							: b
+					),
 				}));
 			},
 
 			removeParticipant: (id) => {
-				set((state) => {
-					// Hapus orangnya
-					const updatedParticipants =
-						state.currentBill.participants.filter(
+				set((state) => ({
+					bills: state.bills.map((b) => {
+						if (b.id !== state.activeBillId) return b;
+
+						// Hapus orangnya
+						const updatedParticipants = b.participants.filter(
 							(p) => p.id !== id
 						);
-
-					// Hapus juga assignment orang ini di semua item makanan
-					const updatedItems = state.currentBill.items.map(
-						(item) => ({
+						// Hapus assignment-nya di semua item
+						const updatedItems = b.items.map((item) => ({
 							...item,
 							assignedToParticipantIds:
 								item.assignedToParticipantIds.filter(
 									(pid) => pid !== id
 								),
-						})
-					);
+						}));
 
-					const updatedBill = {
-						...state.currentBill,
-						participants: updatedParticipants,
-						items: updatedItems,
-					};
-
-					const summary = calculateBill(updatedBill);
-					return { currentBill: updatedBill, billSummary: summary };
-				});
+						return {
+							...b,
+							participants: updatedParticipants,
+							items: updatedItems,
+						};
+					}),
+				}));
 			},
 
 			addItem: (itemData) => {
@@ -121,131 +135,123 @@ export const useBillStore = create<BillState>()(
 					...itemData,
 					assignedToParticipantIds: [],
 				};
-
 				set((state) => ({
-					currentBill: {
-						...state.currentBill,
-						items: [...state.currentBill.items, newItem],
-					},
+					bills: state.bills.map((b) =>
+						b.id === state.activeBillId
+							? { ...b, items: [...b.items, newItem] }
+							: b
+					),
 				}));
 			},
 
 			removeItem: (itemId) => {
-				set((state) => {
-					const updatedItems = state.currentBill.items.filter(
-						(item) => item.id !== itemId
-					);
-
-					const updatedBill = {
-						...state.currentBill,
-						items: updatedItems,
-					};
-					const summary = calculateBill(updatedBill);
-
-					return { currentBill: updatedBill, billSummary: summary };
-				});
+				set((state) => ({
+					bills: state.bills.map((b) =>
+						b.id === state.activeBillId
+							? {
+									...b,
+									items: b.items.filter(
+										(i) => i.id !== itemId
+									),
+							  }
+							: b
+					),
+				}));
 			},
 
 			updateItem: (itemId, data) => {
-				set((state) => {
-					const updatedItems = state.currentBill.items.map((item) => {
-						if (item.id === itemId) {
-							return { ...item, ...data };
-						}
-						return item;
-					});
-
-					const updatedBill = {
-						...state.currentBill,
-						items: updatedItems,
-					};
-					const summary = calculateBill(updatedBill);
-
-					return { currentBill: updatedBill, billSummary: summary };
-				});
+				set((state) => ({
+					bills: state.bills.map((b) => {
+						if (b.id !== state.activeBillId) return b;
+						return {
+							...b,
+							items: b.items.map((item) =>
+								item.id === itemId ? { ...item, ...data } : item
+							),
+						};
+					}),
+				}));
 			},
 
 			updateItemAssignment: (itemId, participantId) => {
-				set((state) => {
-					const updatedItems = state.currentBill.items.map((item) => {
-						if (item.id !== itemId) return item;
-
-						const isAssigned =
-							item.assignedToParticipantIds.includes(
-								participantId
-							);
-						let newAssignments;
-
-						if (isAssigned) {
-							newAssignments =
-								item.assignedToParticipantIds.filter(
-									(id) => id !== participantId
-								);
-						} else {
-							newAssignments = [
-								...item.assignedToParticipantIds,
-								participantId,
-							];
-						}
-
+				set((state) => ({
+					bills: state.bills.map((b) => {
+						if (b.id !== state.activeBillId) return b;
 						return {
-							...item,
-							assignedToParticipantIds: newAssignments,
+							...b,
+							items: b.items.map((item) => {
+								if (item.id !== itemId) return item;
+								const isAssigned =
+									item.assignedToParticipantIds.includes(
+										participantId
+									);
+								const newAssignments = isAssigned
+									? item.assignedToParticipantIds.filter(
+											(id) => id !== participantId
+									  )
+									: [
+											...item.assignedToParticipantIds,
+											participantId,
+									  ];
+								return {
+									...item,
+									assignedToParticipantIds: newAssignments,
+								};
+							}),
 						};
-					});
-
-					const updatedBill = {
-						...state.currentBill,
-						items: updatedItems,
-					};
-					// Recalculate summary
-					const summary = calculateBill(updatedBill);
-
-					return { currentBill: updatedBill, billSummary: summary };
-				});
+					}),
+				}));
 			},
 
 			toggleAllAssignment: (itemId, selectAll) => {
-				set((state) => {
-					const updatedItems = state.currentBill.items.map((item) => {
-						if (item.id !== itemId) return item;
-
-						const allParticipantIds =
-							state.currentBill.participants.map((p) => p.id);
-
+				set((state) => ({
+					bills: state.bills.map((b) => {
+						if (b.id !== state.activeBillId) return b;
+						const allIds = b.participants.map((p) => p.id);
 						return {
-							...item,
-							assignedToParticipantIds: selectAll
-								? allParticipantIds
-								: [],
+							...b,
+							items: b.items.map((item) =>
+								item.id === itemId
+									? {
+											...item,
+											assignedToParticipantIds: selectAll
+												? allIds
+												: [],
+									  }
+									: item
+							),
 						};
-					});
-
-					const updatedBill = {
-						...state.currentBill,
-						items: updatedItems,
-					};
-					const summary = calculateBill(updatedBill);
-
-					return { currentBill: updatedBill, billSummary: summary };
-				});
+					}),
+				}));
 			},
 
-			// Fungsi Reset untuk menghapus data dari memori HP
-			resetBill: () => {
-				set({
-					currentBill: {
-						...initialBill,
-						id: Crypto.randomUUID(),
-						createdAt: new Date().toISOString(),
-					},
-					billSummary: null,
+			cleanupEmptyBills: () => {
+				set((state) => {
+					const filteredBills = state.bills.filter((bill) => {
+						const isEmpty =
+							bill.title.trim() === "" && bill.items.length === 0;
+						return !isEmpty;
+					});
+					return { bills: filteredBills };
 				});
 			},
 		}),
 		{
-			name: "split-bill-storage",
+			name: "split-bill-storage-v3",
 			storage: createJSONStorage(() => AsyncStorage),
 		}
 	)
 );
+
+// --- SELECTORS UTILS ---
+export const useActiveBill = () => {
+	const { bills, activeBillId } = useBillStore();
+	const activeBill = bills.find((b) => b.id === activeBillId);
+	return activeBill || null;
+};
+
+export const useActiveBillSummary = () => {
+	const activeBill = useActiveBill();
+	if (!activeBill) return null;
+	return calculateBill(activeBill);
+};

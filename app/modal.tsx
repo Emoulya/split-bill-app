@@ -13,18 +13,18 @@ import {
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { useBillStore } from "@/src/store/billStore";
+import { useActiveBillSummary, useActiveBill } from "@/src/store/billStore";
 import { formatCurrency } from "@/src/utils/currency";
 
 export default function ResultScreen() {
-	const { billSummary, currentBill } = useBillStore();
+	const currentBill = useActiveBill();
+	const billSummary = useActiveBillSummary();
 	const theme = useColorScheme() ?? "light";
-	const primaryColor = '#0a7ea4';
+	const primaryColor = "#0a7ea4";
 
 	const handleShare = async () => {
-		if (!billSummary) return;
+		if (!billSummary || !currentBill) return;
 
 		let message = `🧾 *${currentBill.title || "Split Bill"}*\n`;
 		message += `Total: ${formatCurrency(billSummary.grandTotal)}\n\n`;

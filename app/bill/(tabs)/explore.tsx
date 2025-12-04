@@ -15,7 +15,11 @@ import {
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { useBillStore } from "@/src/store/billStore";
+import {
+	useActiveBill,
+	useActiveBillSummary,
+	useBillStore,
+} from "@/src/store/billStore";
 import { BillItem } from "@/src/types/Bill";
 import { formatCurrency } from "@/src/utils/currency";
 
@@ -24,15 +28,18 @@ import { BillItemCard } from "@/src/features/bill/components/BillItemCard";
 import { BillItemForm } from "@/src/features/bill/components/BillItemForm";
 
 export default function ItemsScreen() {
+	const currentBill = useActiveBill();
+	const billSummary = useActiveBillSummary();
+
 	const {
-		currentBill,
 		addItem,
 		updateItemAssignment,
 		removeItem,
 		updateItem,
-		billSummary,
 		toggleAllAssignment,
 	} = useBillStore();
+
+	if (!currentBill) return null;
 
 	const theme = useColorScheme() ?? "light";
 	const primaryColor = "#0a7ea4";

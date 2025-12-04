@@ -1,13 +1,7 @@
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Tabs } from "expo-router";
 import React, { useState } from "react";
-import {
-	Alert,
-	ScrollView,
-	StyleSheet,
-	TouchableOpacity,
-	View,
-} from "react-native";
+import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 
 // Components
 import { ThemedText } from "@/components/themed-text";
@@ -15,18 +9,25 @@ import { ThemedView } from "@/components/themed-view";
 import { ThemedInput } from "@/src/components/ui/ThemedInput";
 
 // Store
-import { useBillStore } from "@/src/store/billStore";
+import { useActiveBill, useBillStore } from "@/src/store/billStore";
 
 export default function SetupScreen() {
-	// Data & Action dari Store
-	const {
-		currentBill,
-		setBillInfo,
-		addParticipant,
-		removeParticipant,
-		resetBill,
-	} = useBillStore();
+	const currentBill = useActiveBill();
+	const { setBillInfo, addParticipant, removeParticipant } = useBillStore();
 	const [newParticipantName, setNewParticipantName] = useState("");
+
+	if (!currentBill) {
+		return (
+			<ThemedView
+				style={{
+					flex: 1,
+					justifyContent: "center",
+					alignItems: "center",
+				}}>
+				<ThemedText>Bill tidak ditemukan.</ThemedText>
+			</ThemedView>
+		);
+	}
 
 	// Handler untuk update info bill
 	const handleInfoChange = (
@@ -51,34 +52,11 @@ export default function SetupScreen() {
 		setNewParticipantName("");
 	};
 
-	// --- Reset dengan Konfirmasi ---
-	const handleReset = () => {
-		Alert.alert("Buat Bill Baru?", "Semua data saat ini akan dihapus.", [
-			{ text: "Batal", style: "cancel" },
-			{
-				text: "Ya, Hapus",
-				style: "destructive",
-				onPress: () => resetBill(),
-			},
-		]);
-	};
-
 	return (
 		<>
 			<Tabs.Screen
 				options={{
 					title: "Setup Bill",
-					headerRight: () => (
-						<TouchableOpacity
-							onPress={handleReset}
-							style={{ marginRight: 10, padding: 5 }}>
-							<IconSymbol
-								name="trash"
-								size={24}
-								color="#ff4444"
-							/>
-						</TouchableOpacity>
-					),
 				}}
 			/>
 

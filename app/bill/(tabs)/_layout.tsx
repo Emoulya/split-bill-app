@@ -1,5 +1,7 @@
-import { Tabs } from "expo-router";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { Tabs, router } from "expo-router";
 import React from "react";
+import { TouchableOpacity } from "react-native";
 
 import { HapticTab } from "@/components/haptic-tab";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -8,13 +10,25 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 
 export default function TabLayout() {
 	const colorScheme = useColorScheme();
+	const themeColors = Colors[colorScheme ?? "light"];
 
 	return (
 		<Tabs
 			screenOptions={{
-				tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
+				tabBarActiveTintColor: themeColors.tint,
 				headerShown: true,
 				tabBarButton: HapticTab,
+				headerLeft: () => (
+					<TouchableOpacity
+						onPress={() => router.back()}
+						style={{ marginLeft: 16, paddingRight: 5 }}>
+						<MaterialIcons
+							name="arrow-back"
+							size={24}
+							color={themeColors.text}
+						/>
+					</TouchableOpacity>
+				),
 			}}>
 			<Tabs.Screen
 				name="index"
