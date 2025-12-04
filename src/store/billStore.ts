@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Crypto from "expo-crypto";
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { BillSummary, calculateBill } from "../features/bill/billCalculator";
@@ -46,7 +47,7 @@ export const useBillStore = create<BillState>()(
 		(set, get) => ({
 			currentBill: {
 				...initialBill,
-				id: Date.now().toString(),
+				id: Crypto.randomUUID(),
 				createdAt: new Date().toISOString(),
 			},
 			billSummary: null,
@@ -66,7 +67,7 @@ export const useBillStore = create<BillState>()(
 
 			addParticipant: (name) => {
 				const newParticipant: Participant = {
-					id: Date.now().toString(),
+					id: Crypto.randomUUID(),
 					name,
 					isOwner: false,
 				};
@@ -114,7 +115,7 @@ export const useBillStore = create<BillState>()(
 
 			addItem: (itemData) => {
 				const newItem: BillItem = {
-					id: Date.now().toString(),
+					id: Crypto.randomUUID(),
 					...itemData,
 					assignedToParticipantIds: [],
 				};
@@ -207,7 +208,7 @@ export const useBillStore = create<BillState>()(
 				set({
 					currentBill: {
 						...initialBill,
-						id: Date.now().toString(),
+						id: Crypto.randomUUID(),
 						createdAt: new Date().toISOString(),
 					},
 					billSummary: null,
