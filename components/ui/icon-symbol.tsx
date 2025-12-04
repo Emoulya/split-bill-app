@@ -27,6 +27,7 @@ const MAPPING: Record<string, IconMappingConfig> = {
 	"person.2.fill": { lib: MaterialIcons, iconName: "group" },
 	pencil: { lib: MaterialIcons, iconName: "edit" },
 	checkmark: { lib: MaterialIcons, iconName: "check" },
+	"magnifyingglass": { lib: MaterialIcons, iconName: "search" },
 
 	// MaterialCommunityIcons
 	addMenu: { lib: MaterialCommunityIcons, iconName: "receipt-text-plus" },

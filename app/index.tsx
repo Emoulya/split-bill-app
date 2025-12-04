@@ -1,10 +1,11 @@
 import { router, useFocusEffect } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import {
 	FlatList,
 	Platform,
 	StyleSheet,
+	TextInput,
 	TouchableOpacity,
 	View,
 } from "react-native";
@@ -13,15 +14,24 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { useThemeColor } from "@/hooks/use-theme-color";
 import { BillHistoryCard } from "@/src/features/bill/components/BillHistoryCard";
+import { DashboardStats } from "@/src/features/bill/components/DashboardStats";
 import { useBillStore } from "@/src/store/billStore";
 
 export default function HomeScreen() {
 	const { bills, createBill, deleteBill, setActiveBill, cleanupEmptyBills } =
 		useBillStore();
 	const primaryColor = "#0a7ea4";
+	const textColor = useThemeColor({}, "text");
+	const placeholderColor = useThemeColor(
+		{ light: "#999", dark: "#666" },
+		"text"
+	);
 
-    // Pembersihan otomatis
+	// State untuk Search
+	const [searchQuery, setSearchQuery] = useState("");
+
 	useFocusEffect(
 		useCallback(() => {
 			cleanupEmptyBills();
@@ -29,17 +39,20 @@ export default function HomeScreen() {
 		}, [])
 	);
 
-	// Handler Buat Bill Baru
 	const handleCreateNew = () => {
 		createBill();
 		router.push("/bill/(tabs)");
 	};
 
-	// Handler Buka Bill Lama
 	const handleOpenBill = (id: string) => {
 		setActiveBill(id);
 		router.push("/bill/(tabs)");
 	};
+
+	// Filter Logic
+	const filteredBills = bills.filter((bill) =>
+		bill.title.toLowerCase().includes(searchQuery.toLowerCase())
+	);
 
 	return (
 		<SafeAreaView
@@ -48,33 +61,54 @@ export default function HomeScreen() {
 			<ThemedView style={styles.container}>
 				<StatusBar style={Platform.OS === "ios" ? "dark" : "auto"} />
 
-				{/* HEADER */}
-				<View style={styles.header}>
-					<View>
-						<ThemedText type="title">Split Bill</ThemedText>
-						<ThemedText style={{ opacity: 0.6 }}>
-							Kelola patungan makanmu
-						</ThemedText>
-					</View>
-				</View>
-
-				{/* LIST RIWAYAT */}
 				<FlatList
-					data={bills}
+					data={filteredBills}
 					keyExtractor={(item) => item.id}
 					contentContainerStyle={styles.listContent}
+					// --- HEADER  ---
+					ListHeaderComponent={
+						<View style={{ marginBottom: 20 }}>
+							<DashboardStats bills={bills} />
+
+							<View style={styles.searchContainer}>
+								<IconSymbol
+									name="magnifyingglass"
+									size={20}
+									color="#999"
+								/>
+								<TextInput
+									placeholder="Cari riwayat makan..."
+									placeholderTextColor={placeholderColor}
+									value={searchQuery}
+									onChangeText={setSearchQuery}
+									style={{
+										flex: 1,
+										height: "100%",
+										color: textColor,
+										fontSize: 16,
+										paddingVertical: 0,
+									}}
+								/>
+							</View>
+
+							<ThemedText
+								type="defaultSemiBold"
+								style={{ marginTop: 10, opacity: 0.5 }}>
+								Riwayat Terakhir
+							</ThemedText>
+						</View>
+					}
 					ListEmptyComponent={
 						<View style={styles.emptyState}>
 							<IconSymbol
 								name="doc.text.fill"
-								size={64}
+								size={48}
 								color="#ccc"
 							/>
 							<ThemedText style={{ marginTop: 16, opacity: 0.5 }}>
-								Belum ada riwayat bill.
-							</ThemedText>
-							<ThemedText style={{ opacity: 0.5 }}>
-								Tekan tombol + untuk mulai.
+								{searchQuery
+									? "Tidak ditemukan."
+									: "Belum ada riwayat."}
 							</ThemedText>
 						</View>
 					}
@@ -87,7 +121,7 @@ export default function HomeScreen() {
 					)}
 				/>
 
-				{/* FAB (Floating Action Button) - Tambah Baru */}
+				{/* FAB */}
 				<TouchableOpacity
 					style={[styles.fab, { backgroundColor: primaryColor }]}
 					onPress={handleCreateNew}
@@ -107,22 +141,23 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 	},
-	header: {
-		paddingHorizontal: 20,
-		paddingVertical: 16,
-		flexDirection: "row",
-		justifyContent: "space-between",
-		alignItems: "center",
-        paddingBottom: 10,
-	},
 	listContent: {
 		padding: 20,
 		paddingBottom: 100,
 	},
+	searchContainer: {
+		flexDirection: "row",
+		alignItems: "center",
+		backgroundColor: "rgba(150,150,150, 0.1)",
+		paddingHorizontal: 12,
+		borderRadius: 12,
+		height: 48,
+		overflow: "hidden",
+	},
 	emptyState: {
 		alignItems: "center",
 		justifyContent: "center",
-		marginTop: 100,
+		marginTop: 40,
 	},
 	fab: {
 		position: "absolute",
