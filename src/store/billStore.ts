@@ -32,7 +32,7 @@ const initialBill: Bill = {
 	id: "",
 	title: "",
 	createdAt: "",
-	taxRate: 10,
+	taxRate: 0,
 	serviceRate: 0,
 	discount: 0,
 	participants: [], // Minimal 1 orang (Host)

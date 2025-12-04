@@ -21,7 +21,7 @@ import { formatCurrency } from "@/src/utils/currency";
 export default function ResultScreen() {
 	const { billSummary, currentBill } = useBillStore();
 	const theme = useColorScheme() ?? "light";
-	const activeColor = Colors[theme].tint;
+	const primaryColor = '#0a7ea4';
 
 	const handleShare = async () => {
 		if (!billSummary) return;
@@ -67,7 +67,7 @@ export default function ResultScreen() {
 				<ThemedText style={styles.label}>Grand Total</ThemedText>
 				<ThemedText
 					type="title"
-					style={{ fontSize: 40, color: activeColor }}>
+					style={{ fontSize: 40, color: primaryColor }}>
 					{formatCurrency(billSummary.grandTotal)}
 				</ThemedText>
 				<ThemedText style={styles.subDetail}>
@@ -97,7 +97,7 @@ export default function ResultScreen() {
 							</ThemedText>
 							<ThemedText
 								type="defaultSemiBold"
-								style={{ fontSize: 18, color: activeColor }}>
+								style={{ fontSize: 18, color: primaryColor }}>
 								{formatCurrency(share.totalDue)}
 							</ThemedText>
 						</View>
@@ -143,10 +143,10 @@ export default function ResultScreen() {
 			{/* ACTION BUTTONS */}
 			<View style={styles.footer}>
 				<TouchableOpacity
-					style={[styles.button, { backgroundColor: activeColor }]}
+					style={[styles.button, { backgroundColor: primaryColor }]}
 					onPress={handleShare}>
 					<IconSymbol
-						name="square.and.arrow.up"
+						name="share"
 						size={20}
 						color="white"
 					/>

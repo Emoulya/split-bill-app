@@ -1,40 +1,43 @@
-// Fallback for using MaterialIcons on Android and web.
-
+import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
+import Ionicons from '@expo/vector-icons/Ionicons';
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { SymbolViewProps, SymbolWeight } from "expo-symbols";
-import { ComponentProps } from "react";
-import { OpaqueColorValue, type StyleProp, type TextStyle } from "react-native";
+import { SymbolWeight } from "expo-symbols";
+import { StyleProp, TextStyle } from "react-native";
 
-type IconMapping = Record<
-	SymbolViewProps["name"],
-	ComponentProps<typeof MaterialIcons>["name"]
->;
-type IconSymbolName = keyof typeof MAPPING;
+type IconLib = typeof MaterialIcons | typeof MaterialCommunityIcons | typeof Ionicons;
 
-/**
- * Add your SF Symbols to Material Icons mappings here.
- * - see Material Icons in the [Icons Directory](https://icons.expo.fyi).
- * - see SF Symbols in the [SF Symbols](https://developer.apple.com/sf-symbols/) app.
- */
-const MAPPING = {
-	"house.fill": "home",
-	"paperplane.fill": "send",
-	"chevron.left.forwardslash.chevron.right": "code",
-	"chevron.right": "chevron-right",
-	"xmark.circle.fill": "close",
-	plus: "add",
-	trash: "delete",
-	"doc.text.fill": "receipt",
-	"person.2.fill": "group",
-	"checkmark": "check",
-	"pencil": "edit",
-} as IconMapping;
+interface IconMappingConfig {
+	lib: IconLib;
+	iconName: string;
+}
 
-/**
- * An icon component that uses native SF Symbols on iOS, and Material Icons on Android and web.
- * This ensures a consistent look across platforms, and optimal resource usage.
- * Icon `name`s are based on SF Symbols and require manual mapping to Material Icons.
- */
+const MAPPING: Record<string, IconMappingConfig> = {
+	// MaterialIcons
+	"house.fill": { lib: MaterialIcons, iconName: "home" },
+	"paperplane.fill": { lib: MaterialIcons, iconName: "send" },
+	"chevron.left.forwardslash.chevron.right": {
+		lib: MaterialIcons,
+		iconName: "code",
+	},
+	"chevron.right": { lib: MaterialIcons, iconName: "chevron-right" },
+	"xmark.circle.fill": { lib: MaterialIcons, iconName: "close" },
+	plus: { lib: MaterialIcons, iconName: "add" },
+	trash: { lib: MaterialIcons, iconName: "delete" },
+	"doc.text.fill": { lib: MaterialIcons, iconName: "receipt" },
+	"person.2.fill": { lib: MaterialIcons, iconName: "group" },
+	pencil: { lib: MaterialIcons, iconName: "edit" },
+	checkmark: { lib: MaterialIcons, iconName: "check" },
+
+	// MaterialCommunityIcons
+	addMenu: { lib: MaterialCommunityIcons, iconName: "receipt-text-plus" },
+
+	// Ionicons
+	menuSplit: { lib: Ionicons, iconName: "receipt" },
+	share: { lib: Ionicons, iconName: "share-social" },
+};
+
+export type IconSymbolName = keyof typeof MAPPING;
+
 export function IconSymbol({
 	name,
 	size = 24,
@@ -43,15 +46,30 @@ export function IconSymbol({
 }: {
 	name: IconSymbolName;
 	size?: number;
-	color: string | OpaqueColorValue;
+	color: string;
 	style?: StyleProp<TextStyle>;
 	weight?: SymbolWeight;
 }) {
+	const config = MAPPING[name];
+
+	if (!config) {
+		return (
+			<MaterialIcons
+				name="help-outline"
+				size={size}
+				color={color}
+				style={style}
+			/>
+		);
+	}
+
+	const IconComponent = config.lib;
+
 	return (
-		<MaterialIcons
-			color={color}
+		<IconComponent
+			name={config.iconName as any}
 			size={size}
-			name={MAPPING[name]}
+			color={color}
 			style={style}
 		/>
 	);

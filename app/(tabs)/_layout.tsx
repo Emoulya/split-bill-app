@@ -23,7 +23,7 @@ export default function TabLayout() {
 					tabBarIcon: ({ color }) => (
 						<IconSymbol
 							size={28}
-							name="house.fill"
+							name="doc.text.fill"
 							color={color}
 						/>
 					),
@@ -35,8 +35,8 @@ export default function TabLayout() {
 					title: "Menu & Split",
 					tabBarIcon: ({ color }) => (
 						<IconSymbol
-							size={28}
-							name="doc.text.fill"
+							size={26}
+							name="menuSplit"
 							color={color}
 						/>
 					),

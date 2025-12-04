@@ -1,8 +1,9 @@
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Stack, router } from "expo-router";
-import React, { useState } from "react";
+import { Stack, router, useFocusEffect } from "expo-router";
+import React, { useCallback, useState } from "react";
 import {
 	Alert,
+	BackHandler,
 	FlatList,
 	Keyboard,
 	KeyboardAvoidingView,
@@ -31,7 +32,7 @@ export default function ItemsScreen() {
 		billSummary,
 	} = useBillStore();
 	const theme = useColorScheme() ?? "light";
-	const activeColor = Colors[theme].tint;
+	const primaryColor = '#0a7ea4';
 
 	// Form State
 	const [itemName, setItemName] = useState("");
@@ -42,6 +43,29 @@ export default function ItemsScreen() {
 	const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [menuVisibleId, setMenuVisibleId] = useState<string | null>(null);
+
+	// --- INTERCEPT BACK BUTTON ---
+	useFocusEffect(
+		useCallback(() => {
+			const onBackPress = () => {
+				if (menuVisibleId) {
+					setMenuVisibleId(null);
+					return true;
+				}
+				if (editingId) {
+					resetForm();
+					Keyboard.dismiss();
+					return true;
+				}
+				return false;
+			};
+
+			const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+
+			return () =>
+				subscription.remove();
+		}, [editingId, menuVisibleId])
+	);
 
 	const handleSaveItem = () => {
 		if (!itemName.trim()) {
@@ -128,7 +152,7 @@ export default function ItemsScreen() {
 							styles.inputContainer,
 							editingId
 								? {
-										borderColor: activeColor,
+										borderColor: primaryColor,
 										borderWidth: 1,
 										padding: 10,
 										borderRadius: 12,
@@ -143,14 +167,21 @@ export default function ItemsScreen() {
 								marginBottom: 10,
 							}}>
 							<ThemedText type="subtitle">
-								<View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+								<View
+									style={{
+										flexDirection: "row",
+										alignItems: "center",
+										gap: 8,
+									}}>
 									<IconSymbol
-										name={editingId ? "pencil" : "plus"}
-										size={20}
-										color={activeColor}
+										name={editingId ? "pencil" : "addMenu"}
+										size={24}
+										color={primaryColor}
 									/>
 									<ThemedText type="subtitle">
-										{editingId ? "Edit Menu" : "Tambah Menu"}
+										{editingId
+											? "Edit Menu"
+											: "Tambah Menu"}
 									</ThemedText>
 								</View>
 							</ThemedText>
@@ -191,7 +222,7 @@ export default function ItemsScreen() {
 									{
 										backgroundColor: editingId
 											? "#4CAF50"
-											: activeColor,
+											: primaryColor,
 									},
 								]}
 								onPress={handleSaveItem}>
@@ -223,7 +254,7 @@ export default function ItemsScreen() {
 										{
 											borderColor:
 												isEditing || isMenuVisible
-													? activeColor
+													? primaryColor
 													: theme === "light"
 													? "#eee"
 													: "#333",
@@ -254,11 +285,11 @@ export default function ItemsScreen() {
 													<IconSymbol
 														name="pencil"
 														size={20}
-														color={activeColor}
+														color={primaryColor}
 													/>
 													<ThemedText
 														style={{
-															color: activeColor,
+															color: primaryColor,
 															fontWeight: "bold",
 														}}>
 														Edit
@@ -347,7 +378,7 @@ export default function ItemsScreen() {
 														color:
 															assignedCount === 0
 																? "red"
-																: activeColor,
+																: primaryColor,
 													}}>
 													{assignedCount === 0
 														? "Belum ada yg makan"
@@ -398,7 +429,7 @@ export default function ItemsScreen() {
 																		isSelected
 																			? {
 																					backgroundColor:
-																						activeColor,
+																						primaryColor,
 																			  }
 																			: {
 																					backgroundColor:
@@ -448,7 +479,7 @@ export default function ItemsScreen() {
 							<TouchableOpacity
 								style={[
 									styles.summaryButton,
-									{ backgroundColor: activeColor },
+									{ backgroundColor: primaryColor },
 								]}
 								onPress={() => router.push("/modal")}>
 								<ThemedText
