@@ -25,6 +25,8 @@ interface BillItemCardProps {
 	onUpdateAssignment: (itemId: string, participantId: string) => void;
 
 	primaryColor?: string;
+
+	onToggleAll: (itemId: string, selectAll: boolean) => void;
 }
 
 export function BillItemCard({
@@ -40,9 +42,13 @@ export function BillItemCard({
 	onCloseMenu,
 	onUpdateAssignment,
 	primaryColor = "#0a7ea4",
+	onToggleAll,
 }: BillItemCardProps) {
 	const theme = useColorScheme() ?? "light";
 	const assignedCount = item.assignedToParticipantIds.length;
+	const isAllSelected =
+		item.assignedToParticipantIds.length === participants.length &&
+		participants.length > 0;
 
 	return (
 		<View
@@ -155,9 +161,35 @@ export function BillItemCard({
 			{/* AREA ASSIGNMENT (Muncul jika expanded) */}
 			{isExpanded && !isEditing && !isMenuVisible && (
 				<View style={styles.assignmentContainer}>
-					<ThemedText style={{ marginBottom: 8, fontSize: 12 }}>
-						Siapa yang makan ini?
-					</ThemedText>
+					<View
+						style={{
+							flexDirection: "row",
+							justifyContent: "space-between",
+							alignItems: "center",
+							marginBottom: 10,
+						}}>
+						<ThemedText style={{ fontSize: 12 }}>
+							Siapa yang makan?
+						</ThemedText>
+
+						{participants.length > 0 && (
+							<TouchableOpacity
+								onPress={() =>
+									onToggleAll(item.id, !isAllSelected)
+								}>
+								<ThemedText
+									style={{
+										fontSize: 12,
+										color: primaryColor,
+										fontWeight: "bold",
+									}}>
+									{isAllSelected
+										? "Batal Semua"
+										: "Pilih Semua"}
+								</ThemedText>
+							</TouchableOpacity>
+						)}
+					</View>
 					<View style={styles.chipContainer}>
 						{participants.map((person) => {
 							const isSelected =

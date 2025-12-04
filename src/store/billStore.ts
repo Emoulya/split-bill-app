@@ -26,6 +26,8 @@ interface BillState {
 		itemId: string,
 		data: Partial<Omit<BillItem, "id" | "assignedToParticipantIds">>
 	) => void;
+
+	toggleAllAssignment: (itemId: string, selectAll: boolean) => void;
 }
 
 // --- Initial State ---
@@ -197,6 +199,32 @@ export const useBillStore = create<BillState>()(
 						items: updatedItems,
 					};
 					// Recalculate summary
+					const summary = calculateBill(updatedBill);
+
+					return { currentBill: updatedBill, billSummary: summary };
+				});
+			},
+
+			toggleAllAssignment: (itemId, selectAll) => {
+				set((state) => {
+					const updatedItems = state.currentBill.items.map((item) => {
+						if (item.id !== itemId) return item;
+
+						const allParticipantIds =
+							state.currentBill.participants.map((p) => p.id);
+
+						return {
+							...item,
+							assignedToParticipantIds: selectAll
+								? allParticipantIds
+								: [],
+						};
+					});
+
+					const updatedBill = {
+						...state.currentBill,
+						items: updatedItems,
+					};
 					const summary = calculateBill(updatedBill);
 
 					return { currentBill: updatedBill, billSummary: summary };

@@ -31,6 +31,7 @@ export default function ItemsScreen() {
 		removeItem,
 		updateItem,
 		billSummary,
+		toggleAllAssignment,
 	} = useBillStore();
 
 	const theme = useColorScheme() ?? "light";
@@ -148,6 +149,7 @@ export default function ItemsScreen() {
 								onDelete={handleDeletePress}
 								onCloseMenu={() => setMenuVisibleId(null)}
 								onUpdateAssignment={updateItemAssignment}
+								onToggleAll={toggleAllAssignment}
 								primaryColor={primaryColor}
 							/>
 						)}
