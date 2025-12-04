@@ -1,7 +1,13 @@
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Stack } from "expo-router";
+import { Tabs } from "expo-router";
 import React, { useState } from "react";
-import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import {
+	Alert,
+	ScrollView,
+	StyleSheet,
+	TouchableOpacity,
+	View,
+} from "react-native";
 
 // Components
 import { ThemedText } from "@/components/themed-text";
@@ -13,10 +19,13 @@ import { useBillStore } from "@/src/store/billStore";
 
 export default function SetupScreen() {
 	// Data & Action dari Store
-	const { currentBill, setBillInfo, addParticipant, removeParticipant } =
-		useBillStore();
-
-	// State lokal untuk input nama teman baru
+	const {
+		currentBill,
+		setBillInfo,
+		addParticipant,
+		removeParticipant,
+		resetBill,
+	} = useBillStore();
 	const [newParticipantName, setNewParticipantName] = useState("");
 
 	// Handler untuk update info bill
@@ -39,22 +48,56 @@ export default function SetupScreen() {
 	const handleAddPerson = () => {
 		if (newParticipantName.trim().length === 0) return;
 		addParticipant(newParticipantName.trim());
-		setNewParticipantName(""); // Reset input
+		setNewParticipantName("");
+	};
+
+	// --- Reset dengan Konfirmasi ---
+	const handleReset = () => {
+		Alert.alert("Buat Bill Baru?", "Semua data saat ini akan dihapus.", [
+			{ text: "Batal", style: "cancel" },
+			{
+				text: "Ya, Hapus",
+				style: "destructive",
+				onPress: () => resetBill(),
+			},
+		]);
 	};
 
 	return (
 		<>
-			<Stack.Screen options={{ title: "Setup Bill" }} />
+			<Tabs.Screen
+				options={{
+					title: "Setup Bill",
+					headerRight: () => (
+						<TouchableOpacity
+							onPress={handleReset}
+							style={{ marginRight: 10, padding: 5 }}>
+							<IconSymbol
+								name="trash"
+								size={24}
+								color="#ff4444"
+							/>
+						</TouchableOpacity>
+					),
+				}}
+			/>
 
 			<ThemedView style={{ flex: 1 }}>
 				<ScrollView contentContainerStyle={styles.scrollContent}>
 					{/* --- INFO BILL --- */}
 					<ThemedView style={styles.section}>
-						<ThemedText
-							type="subtitle"
-							style={styles.sectionTitle}>
-							Info Tagihan
-						</ThemedText>
+						<View style={styles.sectionHeader}>
+							<IconSymbol
+								name="doc.text.fill"
+								size={24}
+								color="#0a7ea4"
+							/>
+							<ThemedText
+								type="subtitle"
+								style={styles.sectionTitle}>
+								Info Tagihan
+							</ThemedText>
+						</View>
 
 						<ThemedInput
 							label="Nama Tempat / Judul"
@@ -93,15 +136,22 @@ export default function SetupScreen() {
 
 					{/* --- PARTISIPAN --- */}
 					<ThemedView style={styles.section}>
-						<ThemedText
-							type="subtitle"
-							style={styles.sectionTitle}>
-							Siapa aja yang ikut?
-						</ThemedText>
+						<View style={styles.sectionHeader}>
+							<IconSymbol
+								name="person.2.fill"
+								size={24}
+								color="#0a7ea4"
+							/>
+							<ThemedText
+								type="subtitle"
+								style={styles.sectionTitle}>
+								Siapa aja yang ikut?
+							</ThemedText>
+						</View>
 
 						{/* List Orang yang sudah ada */}
 						<View style={styles.participantList}>
-							{currentBill.participants.map((person, index) => (
+							{currentBill.participants.map((person) => (
 								<View
 									key={person.id}
 									style={styles.participantItem}>
@@ -157,7 +207,7 @@ export default function SetupScreen() {
 
 					{/* --- NEXT STEP INSTRUCTION --- */}
 					<ThemedText style={styles.hint}>
-						Lanjut ke tab "Items" untuk input menu makanan.
+						Lanjut ke tab "Menu & Split" untuk input menu makanan.
 					</ThemedText>
 				</ScrollView>
 			</ThemedView>
@@ -174,8 +224,14 @@ const styles = StyleSheet.create({
 		marginBottom: 24,
 		backgroundColor: "transparent",
 	},
-	sectionTitle: {
+	sectionHeader: {
+		flexDirection: "row",
+		alignItems: "center",
 		marginBottom: 12,
+		gap: 8,
+	},
+	sectionTitle: {
+		marginBottom: 0,
 	},
 	row: {
 		flexDirection: "row",
