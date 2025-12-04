@@ -1,7 +1,15 @@
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Stack, router } from "expo-router";
 import React, { useState } from "react";
-import { FlatList, StyleSheet, TouchableOpacity, View } from "react-native";
+import {
+	Alert,
+	FlatList,
+	KeyboardAvoidingView,
+	Platform,
+	StyleSheet,
+	TouchableOpacity,
+	View,
+} from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -9,26 +17,34 @@ import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { ThemedInput } from "@/src/components/ui/ThemedInput";
 import { useBillStore } from "@/src/store/billStore";
+import { formatCurrency } from "@/src/utils/currency";
 
 export default function ItemsScreen() {
 	const { currentBill, addItem, updateItemAssignment, billSummary } =
 		useBillStore();
 	const theme = useColorScheme() ?? "light";
+	const activeColor = Colors[theme].tint;
 
 	// State untuk form input item baru
 	const [itemName, setItemName] = useState("");
 	const [itemPrice, setItemPrice] = useState("");
 	const [itemQty, setItemQty] = useState("1");
-
-	// State untuk accordion (item mana yang sedang dibuka untuk assign orang)
 	const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
 
 	const handleAddItem = () => {
-		if (!itemName || !itemPrice) return;
+		if (!itemName.trim()) {
+			Alert.alert("Eits!", "Nama menu belum diisi.");
+			return;
+		}
+		const price = parseFloat(itemPrice);
+		if (!itemPrice || isNaN(price) || price <= 0) {
+			Alert.alert("Eits!", "Harga harus diisi angka yang benar.");
+			return;
+		}
 
 		addItem({
 			name: itemName,
-			price: parseFloat(itemPrice) || 0,
+			price: price,
 			quantity: parseInt(itemQty) || 1,
 		});
 
@@ -42,220 +58,219 @@ export default function ItemsScreen() {
 		setExpandedItemId(expandedItemId === id ? null : id);
 	};
 
-	const activeColor = Colors[theme].tint;
-
 	return (
 		<>
 			<Stack.Screen options={{ title: "Menu & Split" }} />
-			<ThemedView style={styles.container}>
-				{/* --- FORM INPUT ITEM BARU --- */}
-				<View style={styles.inputContainer}>
-					<ThemedText
-						type="subtitle"
-						style={{ marginBottom: 10 }}>
-						Tambah Menu
-					</ThemedText>
-					<ThemedInput
-						placeholder="Nama Menu (misal: Sate Ayam)"
-						value={itemName}
-						onChangeText={setItemName}
-					/>
-					<View style={{ flexDirection: "row", gap: 10 }}>
-						<View style={{ flex: 2 }}>
-							<ThemedInput
-								placeholder="Harga"
-								keyboardType="numeric"
-								value={itemPrice}
-								onChangeText={setItemPrice}
-							/>
-						</View>
-						<View style={{ flex: 1 }}>
-							<ThemedInput
-								placeholder="Qty"
-								keyboardType="numeric"
-								value={itemQty}
-								onChangeText={setItemQty}
-							/>
-						</View>
-						<TouchableOpacity
-							style={[
-								styles.addButton,
-								{ backgroundColor: activeColor },
-							]}
-							onPress={handleAddItem}>
-							<IconSymbol
-								name="plus"
-								size={24}
-								color="white"
-							/>
-						</TouchableOpacity>
-					</View>
-				</View>
-
-				{/* --- DAFTAR ITEM (LIST) --- */}
-				<FlatList
-					data={currentBill.items}
-					keyExtractor={(item) => item.id}
-					contentContainerStyle={{ paddingBottom: 100 }}
-					renderItem={({ item }) => {
-						const isExpanded = expandedItemId === item.id;
-						const assignedCount =
-							item.assignedToParticipantIds.length;
-
-						return (
-							<View
-								style={[
-									styles.card,
-									{
-										borderColor:
-											theme === "light" ? "#eee" : "#333",
-									},
-								]}>
-								{/* Header Card */}
-								<TouchableOpacity
-									onPress={() => toggleExpand(item.id)}
-									style={styles.cardHeader}>
-									<View style={{ flex: 1 }}>
-										<ThemedText type="defaultSemiBold">
-											{item.name}
-										</ThemedText>
-										<ThemedText
-											style={{
-												fontSize: 12,
-												opacity: 0.6,
-											}}>
-											{item.quantity}x @{" "}
-											{item.price.toLocaleString()}
-										</ThemedText>
-									</View>
-
-									<View style={{ alignItems: "flex-end" }}>
-										<ThemedText type="defaultSemiBold">
-											{(
-												item.price * item.quantity
-											).toLocaleString()}
-										</ThemedText>
-										<ThemedText
-											style={{
-												fontSize: 12,
-												color:
-													assignedCount === 0
-														? "red"
-														: activeColor,
-											}}>
-											{assignedCount === 0
-												? "Belum ada yg makan"
-												: `Dibagi ${assignedCount} orang`}
-										</ThemedText>
-									</View>
-								</TouchableOpacity>
-
-								{/* Body Card (Daftar Orang - Muncul jika Expanded) */}
-								{isExpanded && (
-									<View style={styles.assignmentContainer}>
-										<ThemedText
-											style={{
-												marginBottom: 8,
-												fontSize: 12,
-											}}>
-											Siapa yang makan ini?
-										</ThemedText>
-										<View style={styles.chipContainer}>
-											{currentBill.participants.map(
-												(person) => {
-													const isSelected =
-														item.assignedToParticipantIds.includes(
-															person.id
-														);
-													return (
-														<TouchableOpacity
-															key={person.id}
-															onPress={() =>
-																updateItemAssignment(
-																	item.id,
-																	person.id
-																)
-															}
-															style={[
-																styles.chip,
-																isSelected
-																	? {
-																			backgroundColor:
-																				activeColor,
-																	  }
-																	: {
-																			backgroundColor:
-																				"#ccc",
-																	  },
-															]}>
-															<ThemedText
-																style={{
-																	color: "white",
-																	fontSize: 12,
-																}}>
-																{person.name}
-															</ThemedText>
-														</TouchableOpacity>
-													);
-												}
-											)}
-										</View>
-									</View>
-								)}
+			<KeyboardAvoidingView
+				behavior={Platform.OS === "ios" ? "padding" : "height"}
+				style={{ flex: 1 }}
+				keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}>
+				<ThemedView style={styles.container}>
+					<View style={styles.inputContainer}>
+						<ThemedText
+							type="subtitle"
+							style={{ marginBottom: 10 }}>
+							Tambah Menu
+						</ThemedText>
+						<ThemedInput
+							placeholder="Nama Menu (misal: Sate Ayam)"
+							value={itemName}
+							onChangeText={setItemName}
+						/>
+						<View style={{ flexDirection: "row", gap: 10 }}>
+							<View style={{ flex: 2 }}>
+								<ThemedInput
+									placeholder="Harga"
+									keyboardType="numeric"
+									value={itemPrice}
+									onChangeText={setItemPrice}
+								/>
 							</View>
-						);
-					}}
-				/>
-
-				{/* --- STICKY FOOTER (TOTAL) --- */}
-				{billSummary && (
-					<View
-						style={[
-							styles.footer,
-							{
-								borderTopColor:
-									theme === "light" ? "#eee" : "#333",
-								backgroundColor:
-									theme === "light" ? "#fff" : "#151718",
-							},
-						]}>
-						<View>
-							<ThemedText style={{ fontSize: 12 }}>
-								Grand Total
-							</ThemedText>
-							<ThemedText type="title">
-								{Math.ceil(
-									billSummary.grandTotal
-								).toLocaleString()}
-							</ThemedText>
+							<View style={{ flex: 1 }}>
+								<ThemedInput
+									placeholder="Qty"
+									keyboardType="numeric"
+									value={itemQty}
+									onChangeText={setItemQty}
+								/>
+							</View>
+							<TouchableOpacity
+								style={[
+									styles.addButton,
+									{ backgroundColor: activeColor },
+								]}
+								onPress={handleAddItem}>
+								<IconSymbol
+									name="plus"
+									size={24}
+									color="white"
+								/>
+							</TouchableOpacity>
 						</View>
-						<TouchableOpacity
-							style={[
-								styles.summaryButton,
-								{ backgroundColor: activeColor },
-							]}
-							onPress={() => router.push("/modal")}
-						>
-							<ThemedText
-								style={{ color: "white", fontWeight: "bold" }}>
-								Lihat Hasil
-							</ThemedText>
-						</TouchableOpacity>
 					</View>
-				)}
-			</ThemedView>
+
+					<FlatList
+						data={currentBill.items}
+						keyExtractor={(item) => item.id}
+						contentContainerStyle={{ paddingBottom: 100 }}
+						renderItem={({ item }) => {
+							const isExpanded = expandedItemId === item.id;
+							const assignedCount =
+								item.assignedToParticipantIds.length;
+
+							return (
+								<View
+									style={[
+										styles.card,
+										{
+											borderColor:
+												theme === "light"
+													? "#eee"
+													: "#333",
+										},
+									]}>
+									<TouchableOpacity
+										onPress={() => toggleExpand(item.id)}
+										style={styles.cardHeader}>
+										<View style={{ flex: 1 }}>
+											<ThemedText type="defaultSemiBold">
+												{item.name}
+											</ThemedText>
+											<ThemedText
+												style={{
+													fontSize: 12,
+													opacity: 0.6,
+												}}>
+												{item.quantity}x @{" "}
+												{formatCurrency(item.price)}
+											</ThemedText>
+										</View>
+
+										<View
+											style={{ alignItems: "flex-end" }}>
+											<ThemedText type="defaultSemiBold">
+												{formatCurrency(
+													item.price * item.quantity
+												)}
+											</ThemedText>
+											<ThemedText
+												style={{
+													fontSize: 12,
+													color:
+														assignedCount === 0
+															? "red"
+															: activeColor,
+												}}>
+												{assignedCount === 0
+													? "Belum ada yg makan"
+													: `Dibagi ${assignedCount} orang`}
+											</ThemedText>
+										</View>
+									</TouchableOpacity>
+
+									{isExpanded && (
+										<View
+											style={styles.assignmentContainer}>
+											<ThemedText
+												style={{
+													marginBottom: 8,
+													fontSize: 12,
+												}}>
+												Siapa yang makan ini?
+											</ThemedText>
+											<View style={styles.chipContainer}>
+												{currentBill.participants.map(
+													(person) => {
+														const isSelected =
+															item.assignedToParticipantIds.includes(
+																person.id
+															);
+														return (
+															<TouchableOpacity
+																key={person.id}
+																onPress={() =>
+																	updateItemAssignment(
+																		item.id,
+																		person.id
+																	)
+																}
+																style={[
+																	styles.chip,
+																	isSelected
+																		? {
+																				backgroundColor:
+																					activeColor,
+																		  }
+																		: {
+																				backgroundColor:
+																					"#ccc",
+																		  },
+																]}>
+																<ThemedText
+																	style={{
+																		color: "white",
+																		fontSize: 12,
+																	}}>
+																	{
+																		person.name
+																	}
+																</ThemedText>
+															</TouchableOpacity>
+														);
+													}
+												)}
+											</View>
+										</View>
+									)}
+								</View>
+							);
+						}}
+					/>
+
+					{billSummary && (
+						<View
+							style={[
+								styles.footer,
+								{
+									borderTopColor:
+										theme === "light" ? "#eee" : "#333",
+									backgroundColor:
+										theme === "light" ? "#fff" : "#151718",
+								},
+							]}>
+							<View>
+								<ThemedText style={{ fontSize: 12 }}>
+									Grand Total
+								</ThemedText>
+								<ThemedText type="title">
+									{formatCurrency(billSummary.grandTotal)}
+								</ThemedText>
+							</View>
+							<TouchableOpacity
+								style={[
+									styles.summaryButton,
+									{ backgroundColor: activeColor },
+								]}
+								onPress={() => router.push("/modal")}>
+								<ThemedText
+									style={{
+										color: "white",
+										fontWeight: "bold",
+									}}>
+									Lihat Hasil
+								</ThemedText>
+							</TouchableOpacity>
+						</View>
+					)}
+				</ThemedView>
+			</KeyboardAvoidingView>
 		</>
 	);
 }
 
 const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-		padding: 16,
-	},
-	inputContainer: {
-		marginBottom: 20,
-	},
+	container: { flex: 1, padding: 16 },
+	inputContainer: { marginBottom: 20 },
 	addButton: {
 		width: 48,
 		height: 48,
@@ -281,16 +296,8 @@ const styles = StyleSheet.create({
 		paddingTop: 0,
 		backgroundColor: "rgba(150,150,150, 0.05)",
 	},
-	chipContainer: {
-		flexDirection: "row",
-		flexWrap: "wrap",
-		gap: 8,
-	},
-	chip: {
-		paddingVertical: 6,
-		paddingHorizontal: 12,
-		borderRadius: 20,
-	},
+	chipContainer: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+	chip: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20 },
 	footer: {
 		position: "absolute",
 		bottom: 0,

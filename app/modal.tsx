@@ -2,7 +2,7 @@ import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React from "react";
 import {
-  Platform,
+	Platform,
 	ScrollView,
 	Share,
 	StyleSheet,
@@ -16,23 +16,23 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useBillStore } from "@/src/store/billStore";
+import { formatCurrency } from "@/src/utils/currency";
 
 export default function ResultScreen() {
 	const { billSummary, currentBill } = useBillStore();
 	const theme = useColorScheme() ?? "light";
 	const activeColor = Colors[theme].tint;
 
-	// Logic untuk Share Text
 	const handleShare = async () => {
 		if (!billSummary) return;
 
 		let message = `🧾 *${currentBill.title || "Split Bill"}*\n`;
-		message += `Total: Rp ${billSummary.grandTotal.toLocaleString()}\n\n`;
+		message += `Total: ${formatCurrency(billSummary.grandTotal)}\n\n`;
 
 		billSummary.shares.forEach((share) => {
-			message += `👤 *${share.participantName}*: Rp ${Math.ceil(
+			message += `👤 *${share.participantName}*: ${formatCurrency(
 				share.totalDue
-			).toLocaleString()}\n`;
+			)}\n`;
 			share.itemsConsumed.forEach((item) => {
 				message += `   - ${item.itemName} (${item.portionQuantity}x)\n`;
 			});
@@ -40,9 +40,7 @@ export default function ResultScreen() {
 		});
 
 		try {
-			await Share.share({
-				message,
-			});
+			await Share.share({ message });
 		} catch (error) {
 			alert(error instanceof Error ? error.message : "An error occurred");
 		}
@@ -70,12 +68,12 @@ export default function ResultScreen() {
 				<ThemedText
 					type="title"
 					style={{ fontSize: 40, color: activeColor }}>
-					Rp {Math.ceil(billSummary.grandTotal).toLocaleString()}
+					{formatCurrency(billSummary.grandTotal)}
 				</ThemedText>
 				<ThemedText style={styles.subDetail}>
-					Subtotal: {billSummary.subtotal.toLocaleString()} | Tax:{" "}
-					{billSummary.totalTax.toLocaleString()} | Service:{" "}
-					{billSummary.totalService.toLocaleString()}
+					Subtotal: {formatCurrency(billSummary.subtotal)} | Tax:{" "}
+					{formatCurrency(billSummary.totalTax)} | Service:{" "}
+					{formatCurrency(billSummary.totalService)}
 				</ThemedText>
 			</View>
 
@@ -100,7 +98,7 @@ export default function ResultScreen() {
 							<ThemedText
 								type="defaultSemiBold"
 								style={{ fontSize: 18, color: activeColor }}>
-								Rp {Math.ceil(share.totalDue).toLocaleString()}
+								{formatCurrency(share.totalDue)}
 							</ThemedText>
 						</View>
 
@@ -118,7 +116,7 @@ export default function ResultScreen() {
 									{item.itemName}
 								</ThemedText>
 								<ThemedText style={styles.itemPrice}>
-									{item.portionPrice.toLocaleString()}
+									{formatCurrency(item.portionPrice)}
 								</ThemedText>
 							</View>
 						))}
@@ -133,9 +131,9 @@ export default function ResultScreen() {
 								Tax & Service
 							</ThemedText>
 							<ThemedText style={{ fontSize: 12 }}>
-								{(
+								{formatCurrency(
 									share.taxAmount + share.serviceAmount
-								).toLocaleString()}
+								)}
 							</ThemedText>
 						</View>
 					</View>
@@ -171,39 +169,18 @@ export default function ResultScreen() {
 }
 
 const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-	},
-	center: {
-		flex: 1,
-		justifyContent: "center",
-		alignItems: "center",
-	},
-	header: {
-		alignItems: "center",
-		paddingVertical: 20,
-		borderBottomWidth: 1,
-	},
+	container: { flex: 1 },
+	center: { flex: 1, justifyContent: "center", alignItems: "center" },
+	header: { alignItems: "center", paddingVertical: 20, borderBottomWidth: 1 },
 	label: {
 		fontSize: 14,
 		opacity: 0.6,
 		textTransform: "uppercase",
 		letterSpacing: 1,
 	},
-	subDetail: {
-		fontSize: 12,
-		opacity: 0.5,
-		marginTop: 5,
-	},
-	listContent: {
-		padding: 16,
-		paddingBottom: 100,
-	},
-	card: {
-		borderRadius: 12,
-		padding: 16,
-		marginBottom: 16,
-	},
+	subDetail: { fontSize: 12, opacity: 0.5, marginTop: 5 },
+	listContent: { padding: 16, paddingBottom: 100 },
+	card: { borderRadius: 12, padding: 16, marginBottom: 16 },
 	cardHeader: {
 		flexDirection: "row",
 		justifyContent: "space-between",
@@ -219,16 +196,8 @@ const styles = StyleSheet.create({
 		justifyContent: "space-between",
 		marginBottom: 4,
 	},
-	itemName: {
-		fontSize: 14,
-		opacity: 0.8,
-		flex: 1,
-	},
-	itemPrice: {
-		fontSize: 14,
-		opacity: 0.8,
-		fontVariant: ["tabular-nums"], // Supaya angka rata kanan rapi
-	},
+	itemName: { fontSize: 14, opacity: 0.8, flex: 1 },
+	itemPrice: { fontSize: 14, opacity: 0.8, fontVariant: ["tabular-nums"] },
 	footer: {
 		position: "absolute",
 		bottom: 0,
@@ -238,7 +207,6 @@ const styles = StyleSheet.create({
 		paddingBottom: 30,
 		flexDirection: "row",
 		gap: 12,
-		// Background blur effect bisa ditambah nanti
 	},
 	button: {
 		flex: 1,
@@ -249,11 +217,7 @@ const styles = StyleSheet.create({
 		justifyContent: "center",
 		gap: 8,
 	},
-	buttonText: {
-		color: "white",
-		fontWeight: "bold",
-		fontSize: 16,
-	},
+	buttonText: { color: "white", fontWeight: "bold", fontSize: 16 },
 	closeButton: {
 		backgroundColor: "transparent",
 		borderWidth: 1,
