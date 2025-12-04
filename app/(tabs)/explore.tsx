@@ -1,4 +1,3 @@
-import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Stack, router, useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
@@ -15,12 +14,14 @@ import {
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
-import { ThemedInput } from "@/src/components/ui/ThemedInput";
 import { useBillStore } from "@/src/store/billStore";
 import { BillItem } from "@/src/types/Bill";
 import { formatCurrency } from "@/src/utils/currency";
+
+// Import komponen baru
+import { BillItemCard } from "@/src/features/bill/components/BillItemCard";
+import { BillItemForm } from "@/src/features/bill/components/BillItemForm";
 
 export default function ItemsScreen() {
 	const {
@@ -31,20 +32,21 @@ export default function ItemsScreen() {
 		updateItem,
 		billSummary,
 	} = useBillStore();
+
 	const theme = useColorScheme() ?? "light";
-	const primaryColor = '#0a7ea4';
+	const primaryColor = "#0a7ea4";
 
-	// Form State
-	const [itemName, setItemName] = useState("");
-	const [itemPrice, setItemPrice] = useState("");
-	const [itemQty, setItemQty] = useState("1");
-
-	// UI State
+	// UI State Orchestration
 	const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
 	const [editingId, setEditingId] = useState<string | null>(null);
 	const [menuVisibleId, setMenuVisibleId] = useState<string | null>(null);
 
-	// --- INTERCEPT BACK BUTTON ---
+	// Hitung data item yang sedang diedit untuk dilempar ke Form
+	const itemToEdit = editingId
+		? currentBill.items.find((i) => i.id === editingId)
+		: null;
+
+	// --- HANDLER BACK BUTTON ---
 	useFocusEffect(
 		useCallback(() => {
 			const onBackPress = () => {
@@ -53,69 +55,38 @@ export default function ItemsScreen() {
 					return true;
 				}
 				if (editingId) {
-					resetForm();
+					setEditingId(null);
 					Keyboard.dismiss();
 					return true;
 				}
 				return false;
 			};
-
-			const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
-
-			return () =>
-				subscription.remove();
+			const subscription = BackHandler.addEventListener(
+				"hardwareBackPress",
+				onBackPress
+			);
+			return () => subscription.remove();
 		}, [editingId, menuVisibleId])
 	);
 
-	const handleSaveItem = () => {
-		if (!itemName.trim()) {
-			Alert.alert("Eits!", "Nama menu belum diisi.");
-			return;
-		}
-		const price = parseFloat(itemPrice);
-		if (!itemPrice || isNaN(price) || price <= 0) {
-			Alert.alert("Eits!", "Harga harus diisi angka yang benar.");
-			return;
-		}
-		const qty = parseInt(itemQty) || 1;
+	// --- LOGIC ACTIONS ---
 
+	const handleSaveItem = (name: string, price: number, quantity: number) => {
 		if (editingId) {
-			updateItem(editingId, {
-				name: itemName,
-				price: price,
-				quantity: qty,
-			});
+			updateItem(editingId, { name, price, quantity });
 			setEditingId(null);
 			Keyboard.dismiss();
 		} else {
-			addItem({ name: itemName, price: price, quantity: qty });
+			addItem({ name, price, quantity });
 		}
-		resetForm();
 	};
 
-	const resetForm = () => {
-		setItemName("");
-		setItemPrice("");
-		setItemQty("1");
-		setEditingId(null);
-	};
-
-	// --- MENU HANDLER ---
-
-	const handleLongPress = (id: string) => {
-		setMenuVisibleId(id);
-		setExpandedItemId(null);
-	};
-
-	const onEditPress = (item: BillItem) => {
+	const handleEditPress = (item: BillItem) => {
 		setMenuVisibleId(null);
 		setEditingId(item.id);
-		setItemName(item.name);
-		setItemPrice(item.price.toString());
-		setItemQty(item.quantity.toString());
 	};
 
-	const onDeletePress = (id: string) => {
+	const handleDeletePress = (id: string) => {
 		Alert.alert("Hapus Menu?", "Yakin mau menghapus menu ini?", [
 			{ text: "Batal", style: "cancel" },
 			{
@@ -137,6 +108,11 @@ export default function ItemsScreen() {
 		setExpandedItemId(expandedItemId === id ? null : id);
 	};
 
+	const handleLongPress = (id: string) => {
+		setMenuVisibleId(id);
+		setExpandedItemId(null);
+	};
+
 	return (
 		<>
 			<Stack.Screen options={{ title: "Menu & Split" }} />
@@ -146,317 +122,38 @@ export default function ItemsScreen() {
 				style={{ flex: 1 }}
 				keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}>
 				<ThemedView style={styles.container}>
-					{/* --- FORM INPUT --- */}
-					<View
-						style={[
-							styles.inputContainer,
-							editingId
-								? {
-										borderColor: primaryColor,
-										borderWidth: 1,
-										padding: 10,
-										borderRadius: 12,
-										borderStyle: "dashed",
-								  }
-								: {},
-						]}>
-						<View
-							style={{
-								flexDirection: "row",
-								justifyContent: "space-between",
-								marginBottom: 10,
-							}}>
-							<ThemedText type="subtitle">
-								<View
-									style={{
-										flexDirection: "row",
-										alignItems: "center",
-										gap: 8,
-									}}>
-									<IconSymbol
-										name={editingId ? "pencil" : "addMenu"}
-										size={24}
-										color={primaryColor}
-									/>
-									<ThemedText type="subtitle">
-										{editingId
-											? "Edit Menu"
-											: "Tambah Menu"}
-									</ThemedText>
-								</View>
-							</ThemedText>
-							{editingId && (
-								<TouchableOpacity onPress={resetForm}>
-									<ThemedText style={{ color: "red" }}>
-										Batal
-									</ThemedText>
-								</TouchableOpacity>
-							)}
-						</View>
+					{/* FORM INPUT */}
+					<BillItemForm
+						itemToEdit={itemToEdit}
+						onSave={handleSaveItem}
+						onCancelEdit={() => setEditingId(null)}
+						primaryColor={primaryColor}
+					/>
 
-						<ThemedInput
-							placeholder="Nama Menu"
-							value={itemName}
-							onChangeText={setItemName}
-						/>
-						<View style={{ flexDirection: "row", gap: 10 }}>
-							<View style={{ flex: 2 }}>
-								<ThemedInput
-									placeholder="Harga"
-									keyboardType="numeric"
-									value={itemPrice}
-									onChangeText={setItemPrice}
-								/>
-							</View>
-							<View style={{ flex: 1 }}>
-								<ThemedInput
-									placeholder="Qty"
-									keyboardType="numeric"
-									value={itemQty}
-									onChangeText={setItemQty}
-								/>
-							</View>
-							<TouchableOpacity
-								style={[
-									styles.addButton,
-									{
-										backgroundColor: editingId
-											? "#4CAF50"
-											: primaryColor,
-									},
-								]}
-								onPress={handleSaveItem}>
-								<IconSymbol
-									name={editingId ? "checkmark" : "plus"}
-									size={24}
-									color="white"
-								/>
-							</TouchableOpacity>
-						</View>
-					</View>
-
-					{/* --- LIST ITEM --- */}
+					{/* LIST ITEM */}
 					<FlatList
 						data={currentBill.items}
 						keyExtractor={(item) => item.id}
 						contentContainerStyle={{ paddingBottom: 100 }}
-						renderItem={({ item }) => {
-							const isExpanded = expandedItemId === item.id;
-							const isEditing = editingId === item.id;
-							const isMenuVisible = menuVisibleId === item.id;
-							const assignedCount =
-								item.assignedToParticipantIds.length;
-
-							return (
-								<View
-									style={[
-										styles.card,
-										{
-											borderColor:
-												isEditing || isMenuVisible
-													? primaryColor
-													: theme === "light"
-													? "#eee"
-													: "#333",
-										},
-										isEditing && {
-											backgroundColor:
-												"rgba(10, 126, 164, 0.05)",
-										},
-									]}>
-									{/* LAYER MENU OVERLAY */}
-									{isMenuVisible ? (
-										<View
-											style={[
-												styles.menuOverlay,
-												{
-													backgroundColor:
-														theme === "light"
-															? "#f0f9ff"
-															: "#2A2A2A",
-												},
-											]}>
-											<View style={styles.menuContent}>
-												<TouchableOpacity
-													onPress={() =>
-														onEditPress(item)
-													}
-													style={styles.menuButton}>
-													<IconSymbol
-														name="pencil"
-														size={20}
-														color={primaryColor}
-													/>
-													<ThemedText
-														style={{
-															color: primaryColor,
-															fontWeight: "bold",
-														}}>
-														Edit
-													</ThemedText>
-												</TouchableOpacity>
-
-												<View
-													style={{
-														width: 1,
-														height: 20,
-														backgroundColor: "#ccc",
-													}}
-												/>
-
-												<TouchableOpacity
-													onPress={() =>
-														onDeletePress(item.id)
-													}
-													style={styles.menuButton}>
-													<IconSymbol
-														name="trash"
-														size={20}
-														color="#ff4444"
-													/>
-													<ThemedText
-														style={{
-															color: "#ff4444",
-															fontWeight: "bold",
-														}}>
-														Hapus
-													</ThemedText>
-												</TouchableOpacity>
-											</View>
-
-											{/* Tombol Tutup X Kecil */}
-											<TouchableOpacity
-												onPress={() =>
-													setMenuVisibleId(null)
-												}
-												style={styles.closeMenuButton}>
-												<IconSymbol
-													name="xmark.circle.fill"
-													size={24}
-													color="#999"
-												/>
-											</TouchableOpacity>
-										</View>
-									) : (
-										<TouchableOpacity
-											onPress={() =>
-												toggleExpand(item.id)
-											}
-											onLongPress={() =>
-												handleLongPress(item.id)
-											}
-											delayLongPress={400}
-											activeOpacity={0.7}
-											style={styles.cardHeader}>
-											<View style={{ flex: 1 }}>
-												<ThemedText type="defaultSemiBold">
-													{item.name}
-												</ThemedText>
-												<ThemedText
-													style={{
-														fontSize: 12,
-														opacity: 0.6,
-													}}>
-													{item.quantity}x @{" "}
-													{formatCurrency(item.price)}
-												</ThemedText>
-											</View>
-
-											<View
-												style={{
-													alignItems: "flex-end",
-												}}>
-												<ThemedText type="defaultSemiBold">
-													{formatCurrency(
-														item.price *
-															item.quantity
-													)}
-												</ThemedText>
-												<ThemedText
-													style={{
-														fontSize: 12,
-														color:
-															assignedCount === 0
-																? "red"
-																: primaryColor,
-													}}>
-													{assignedCount === 0
-														? "Belum ada yg makan"
-														: `Dibagi ${assignedCount} orang`}
-												</ThemedText>
-											</View>
-										</TouchableOpacity>
-									)}
-
-									{/* Body Expand */}
-									{isExpanded &&
-										!isEditing &&
-										!isMenuVisible && (
-											<View
-												style={
-													styles.assignmentContainer
-												}>
-												<ThemedText
-													style={{
-														marginBottom: 8,
-														fontSize: 12,
-													}}>
-													Siapa yang makan ini?
-												</ThemedText>
-												<View
-													style={
-														styles.chipContainer
-													}>
-													{currentBill.participants.map(
-														(person) => {
-															const isSelected =
-																item.assignedToParticipantIds.includes(
-																	person.id
-																);
-															return (
-																<TouchableOpacity
-																	key={
-																		person.id
-																	}
-																	onPress={() =>
-																		updateItemAssignment(
-																			item.id,
-																			person.id
-																		)
-																	}
-																	style={[
-																		styles.chip,
-																		isSelected
-																			? {
-																					backgroundColor:
-																						primaryColor,
-																			  }
-																			: {
-																					backgroundColor:
-																						"#ccc",
-																			  },
-																	]}>
-																	<ThemedText
-																		style={{
-																			color: "white",
-																			fontSize: 12,
-																		}}>
-																		{
-																			person.name
-																		}
-																	</ThemedText>
-																</TouchableOpacity>
-															);
-														}
-													)}
-												</View>
-											</View>
-										)}
-								</View>
-							);
-						}}
+						renderItem={({ item }) => (
+							<BillItemCard
+								item={item}
+								participants={currentBill.participants}
+								isExpanded={expandedItemId === item.id}
+								isMenuVisible={menuVisibleId === item.id}
+								isEditing={editingId === item.id}
+								onToggleExpand={toggleExpand}
+								onLongPress={handleLongPress}
+								onEdit={handleEditPress}
+								onDelete={handleDeletePress}
+								onCloseMenu={() => setMenuVisibleId(null)}
+								onUpdateAssignment={updateItemAssignment}
+								primaryColor={primaryColor}
+							/>
+						)}
 					/>
 
+					{/* FOOTER SUMMARY */}
 					{billSummary && !editingId && (
 						<View
 							style={[
@@ -500,36 +197,6 @@ export default function ItemsScreen() {
 
 const styles = StyleSheet.create({
 	container: { flex: 1, padding: 16 },
-	inputContainer: { marginBottom: 20 },
-	addButton: {
-		width: 48,
-		height: 48,
-		borderRadius: 8,
-		justifyContent: "center",
-		alignItems: "center",
-		marginBottom: 12,
-	},
-	card: {
-		borderWidth: 1,
-		borderRadius: 12,
-		marginBottom: 12,
-		overflow: "hidden",
-		minHeight: 70,
-		justifyContent: "center",
-	},
-	cardHeader: {
-		padding: 16,
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-	},
-	assignmentContainer: {
-		padding: 16,
-		paddingTop: 0,
-		backgroundColor: "rgba(150,150,150, 0.05)",
-	},
-	chipContainer: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-	chip: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20 },
 	footer: {
 		position: "absolute",
 		bottom: 0,
@@ -551,32 +218,5 @@ const styles = StyleSheet.create({
 		paddingVertical: 10,
 		paddingHorizontal: 20,
 		borderRadius: 24,
-	},
-
-	// Style Menu
-	menuOverlay: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-		paddingHorizontal: 16,
-		height: "100%",
-		position: "absolute",
-		width: "100%",
-		zIndex: 10,
-	},
-	menuContent: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 20,
-		flex: 1,
-	},
-	menuButton: {
-		flexDirection: "row",
-		alignItems: "center",
-		gap: 8,
-		paddingVertical: 10,
-	},
-	closeMenuButton: {
-		padding: 5,
 	},
 });
