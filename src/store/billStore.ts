@@ -19,6 +19,12 @@ interface BillState {
 	addItem: (item: Omit<BillItem, "id" | "assignedToParticipantIds">) => void;
 	updateItemAssignment: (itemId: string, participantId: string) => void;
 	resetBill: () => void;
+
+	removeItem: (itemId: string) => void;
+	updateItem: (
+		itemId: string,
+		data: Partial<Omit<BillItem, "id" | "assignedToParticipantIds">>
+	) => void;
 }
 
 // --- Initial State ---
@@ -119,6 +125,41 @@ export const useBillStore = create<BillState>()(
 						items: [...state.currentBill.items, newItem],
 					},
 				}));
+			},
+
+			removeItem: (itemId) => {
+				set((state) => {
+					const updatedItems = state.currentBill.items.filter(
+						(item) => item.id !== itemId
+					);
+
+					const updatedBill = {
+						...state.currentBill,
+						items: updatedItems,
+					};
+					const summary = calculateBill(updatedBill);
+
+					return { currentBill: updatedBill, billSummary: summary };
+				});
+			},
+
+			updateItem: (itemId, data) => {
+				set((state) => {
+					const updatedItems = state.currentBill.items.map((item) => {
+						if (item.id === itemId) {
+							return { ...item, ...data };
+						}
+						return item;
+					});
+
+					const updatedBill = {
+						...state.currentBill,
+						items: updatedItems,
+					};
+					const summary = calculateBill(updatedBill);
+
+					return { currentBill: updatedBill, billSummary: summary };
+				});
 			},
 
 			updateItemAssignment: (itemId, participantId) => {
