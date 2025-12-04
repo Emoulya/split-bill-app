@@ -42,9 +42,22 @@ export const useBillStore = create<BillState>((set, get) => ({
 	billSummary: null,
 
 	setBillInfo: (title, taxRate, serviceRate) => {
-		set((state) => ({
-			currentBill: { ...state.currentBill, title, taxRate, serviceRate },
-		}));
+		set((state) => {
+			const updatedBill = {
+				...state.currentBill,
+				title,
+				taxRate,
+				serviceRate,
+			};
+
+			// Panggil kalkulator setiap kali info berubah
+			const summary = calculateBill(updatedBill);
+
+			return {
+				currentBill: updatedBill,
+				billSummary: summary,
+			};
+		});
 	},
 
 	addParticipant: (name) => {
@@ -54,16 +67,15 @@ export const useBillStore = create<BillState>((set, get) => ({
 			isOwner: false,
 		};
 
-		set((state) => {
-			const updatedBill = {
+		set((state) => ({
+			currentBill: {
 				...state.currentBill,
 				participants: [
 					...state.currentBill.participants,
 					newParticipant,
 				],
-			};
-			return { currentBill: updatedBill };
-		});
+			},
+		}));
 	},
 
 	removeParticipant: (id) => {
@@ -81,12 +93,17 @@ export const useBillStore = create<BillState>((set, get) => ({
 				),
 			}));
 
+			const updatedBill = {
+				...state.currentBill,
+				participants: updatedParticipants,
+				items: updatedItems,
+			};
+
+			const summary = calculateBill(updatedBill);
+
 			return {
-				currentBill: {
-					...state.currentBill,
-					participants: updatedParticipants,
-					items: updatedItems,
-				},
+				currentBill: updatedBill,
+				billSummary: summary,
 			};
 		});
 	},
@@ -116,12 +133,10 @@ export const useBillStore = create<BillState>((set, get) => ({
 				let newAssignments;
 
 				if (isAssigned) {
-					// Kalau sudah ada, hapus
 					newAssignments = item.assignedToParticipantIds.filter(
 						(id) => id !== participantId
 					);
 				} else {
-					// Kalau belum ada, tambah
 					newAssignments = [
 						...item.assignedToParticipantIds,
 						participantId,
@@ -131,8 +146,9 @@ export const useBillStore = create<BillState>((set, get) => ({
 				return { ...item, assignedToParticipantIds: newAssignments };
 			});
 
-			// Setiap kali data berubah, hitung ulang Summary-nya
 			const updatedBill = { ...state.currentBill, items: updatedItems };
+
+			// Recalculate summary
 			const summary = calculateBill(updatedBill);
 
 			return {
